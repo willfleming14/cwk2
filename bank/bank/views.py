@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from bank.models import Account, Currency, Transaction
 import json
+import requests
 import random
 
 
@@ -111,7 +112,7 @@ def exchange_currency(amount, from_currency_id, to_currency_id):
     # Perform the currency exchange
     exchanged_amount = amount * from_currency.exchange_rate / to_currency.exchange_rate
 
-    return exchanged_amount
+    return format(exchanged_amount, '.2f')
 
 
 class CurrencyExchangeView(View):
@@ -145,13 +146,37 @@ class CurrencyExchangeView(View):
             return JsonResponse({'status': 'failed', 'message': 'Invalid currency code'}, status=400)
 
         # Perform the currency exchange
-        exchanged_amount = amount * from_currency.exchange_rate / to_currency.exchange_rate
+        exchanged_amount = amount / from_currency.exchange_rate * to_currency.exchange_rate
 
         # Return the result
         return JsonResponse({
-            'original_amount': amount,
+            'original_amount': format(amount, '.2f'),
             'original_currency': from_currency.code,
-            'exchanged_amount': exchanged_amount,
+            'exchanged_amount': format(exchanged_amount, '.2f'),
             'exchanged_currency': to_currency.code,
         })
+    
+class GetCurrencyExchangeView(View):
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def get(self, request, from_currency, amount, *args, **kwargs):
+        try:
+            amount = float(amount)
+        except ValueError:
+            return JsonResponse({'status': 'failed', 'message': 'Invalid amount'}, status=400)
+        
+        try:
+            from_currency = Currency.objects.get(code=from_currency)
+            to_currency = Currency.objects.get(code='GBP')
+        except Currency.DoesNotExist:
+            return JsonResponse({'status': 'failed', 'message': 'Invalid currency code'}, status=400)
+
+        # Perform the currency exchange
+        exchanged_amount = amount / from_currency.exchange_rate * to_currency.exchange_rate
+
+
+
+        return JsonResponse({'convertedAmount': format(exchanged_amount, '.2f')})
+
     
