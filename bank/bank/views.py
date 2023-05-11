@@ -7,7 +7,6 @@ import json
 import random
 
 
-
 # Currency.objects.create(code='GBP', symbol='£', exchange_rate=1.00)
 
 # Currency.objects.create(code='USD', symbol='$', exchange_rate=1.38) 
@@ -34,6 +33,7 @@ import random
 # Transaction.objects.create(account_id=account_b, transaction_date=timezone.now(), transaction_amount=random.uniform(100, 1000), transaction_currency=gbp)
 # Transaction.objects.create(account_id=account_c, transaction_date=timezone.now(), transaction_amount=random.uniform(100, 1000), transaction_currency=gbp)
 
+
 class PayView(View):
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
@@ -59,7 +59,9 @@ class PayView(View):
             transaction_currency_id=currency,
         )
 
-        recipient_account.balance += amount
+        exchanged_amount = exchange_currency(transaction.transaction_amount, transaction.transaction_currency, recipient_account.currency_id)
+
+        recipient_account.balance += exchanged_amount
         recipient_account.save()
 
         return JsonResponse({'status': 'success', 'TransactionID': transaction.transaction_id})
@@ -84,11 +86,34 @@ class RefundView(View):
         amount = transaction.transaction_amount
         recipient_account = Account.objects.get(account_id=transaction.account_id)
 
+        exchanged_amount = exchange_currency(transaction.transaction_amount, recipient_account.currency_id, transaction.transaction_currency)
+
         recipient_account.balance -= amount
         recipient_account.save()
 
         return JsonResponse({'status': 'success', 'transaction_id': transaction_id})
     
+
+def exchange_currency(amount, from_currency_id, to_currency_id):
+    # Convert the amount to a float
+    try:
+        amount = float(amount)
+    except ValueError:
+        raise ValueError('Invalid amount parameter')
+
+    # Get the currencies
+    try:
+        from_currency = Currency.objects.get(id=from_currency_id)
+        to_currency = Currency.objects.get(id=to_currency_id)
+    except Currency.DoesNotExist:
+        raise ValueError('Invalid currency code')
+
+    # Perform the currency exchange
+    exchanged_amount = amount * from_currency.exchange_rate / to_currency.exchange_rate
+
+    return exchanged_amount
+
+
 class CurrencyExchangeView(View):
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
@@ -129,3 +154,4 @@ class CurrencyExchangeView(View):
             'exchanged_amount': exchanged_amount,
             'exchanged_currency': to_currency.code,
         })
+    
