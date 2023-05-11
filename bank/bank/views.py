@@ -89,7 +89,7 @@ class RefundView(View):
 
         exchanged_amount = exchange_currency(transaction.transaction_amount, recipient_account.currency_id, transaction.transaction_currency)
 
-        recipient_account.balance -= amount
+        recipient_account.balance -= exchanged_amount
         recipient_account.save()
 
         return JsonResponse({'status': 'success', 'transaction_id': transaction_id})
