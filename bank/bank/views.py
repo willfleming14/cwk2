@@ -30,9 +30,9 @@ import random
 # account_b = Account.objects.get(account_id=2)
 # account_c = Account.objects.get(account_id=3)
 
-# Transaction.objects.create(account_id=account_a, transaction_date=timezone.now(), transaction_amount=random.uniform(100, 1000), transaction_currency=gbp)
-# Transaction.objects.create(account_id=account_b, transaction_date=timezone.now(), transaction_amount=random.uniform(100, 1000), transaction_currency=gbp)
-# Transaction.objects.create(account_id=account_c, transaction_date=timezone.now(), transaction_amount=random.uniform(100, 1000), transaction_currency=gbp)
+# Transaction.objects.create(account_id=account_a, transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
+# Transaction.objects.create(account_id=account_b, transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
+# Transaction.objects.create(account_id=account_c, transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
 
 
 class PayView(View):
@@ -110,7 +110,7 @@ def exchange_currency(amount, from_currency_id, to_currency_id):
         raise ValueError('Invalid currency code')
 
     # Perform the currency exchange
-    exchanged_amount = amount * from_currency.exchange_rate / to_currency.exchange_rate
+    exchanged_amount = amount / from_currency.exchange_rate * to_currency.exchange_rate
 
     return format(exchanged_amount, '.2f')
 
@@ -174,8 +174,6 @@ class GetCurrencyExchangeView(View):
 
         # Perform the currency exchange
         exchanged_amount = amount / from_currency.exchange_rate * to_currency.exchange_rate
-
-
 
         return JsonResponse({'convertedAmount': format(exchanged_amount, '.2f')})
 
