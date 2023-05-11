@@ -50,6 +50,19 @@ class PayView(View):
         amount = data['transaction']['amount']
         currency_code = data['transaction']['currency']
         recipient_account_name = data['transaction']['recipient account']
+        reservationId = data['transaction']['reservationId']
+
+        url = 'http://127.0.0.1:8000/airline/confirm_booking' # Has to be changed for when we have actual links
+
+        data = {
+            'reservation_id': reservationId, 
+            'amount': amount,  
+        }
+
+        response = requests.post(url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
+
+        if response != 200:
+            return JsonResponse({'status': 'failed', 'message': 'Amount not confirmed'}, status=400)
 
         try:
             currency = Currency.objects.get(code=currency_code)
