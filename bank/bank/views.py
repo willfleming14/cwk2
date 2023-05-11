@@ -84,7 +84,6 @@ class RefundView(View):
         except (Transaction.DoesNotExist):
             return JsonResponse({'status': 'failed', 'message': 'Invalid transaction ID'}, status=400)
 
-        amount = transaction.transaction_amount
         recipient_account = Account.objects.get(account_id=transaction.account_id)
 
         exchanged_amount = exchange_currency(transaction.transaction_amount, recipient_account.currency_id, transaction.transaction_currency)
