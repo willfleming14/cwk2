@@ -40,6 +40,7 @@ class PayView(View):
         return super().dispatch(*args, **kwargs)
 
     def post(self, request, *args, **kwargs):
+        # Populate database if not already done so
         if not Account.objects.exists():
             populateDatabase()
 
@@ -52,15 +53,13 @@ class PayView(View):
         recipient_account_name = data['transaction']['recipient account']
         reservationId = data['transaction']['reservationId']
 
+        # Confirm booking by confirming amount and reservation ID
         url = 'http://127.0.0.1:8000/airline/confirm_booking' # Has to be changed for when we have actual links
-
         data = {
-            'reservation_id': reservationId, 
+            'reservationId': reservationId, 
             'amount': amount,  
         }
-
         response = requests.post(url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
-
         if response != 200:
             return JsonResponse({'status': 'failed', 'message': 'Amount not confirmed'}, status=400)
 
@@ -177,7 +176,10 @@ class GetCurrencyExchangeView(View):
         return super().dispatch(*args, **kwargs)
 
     def get(self, request, from_currency, amount, *args, **kwargs):
-
+        # Populate database if not already done so
+        if not Account.objects.exists():
+            populateDatabase()
+            
         try:
             amount = float(amount)
         except ValueError:
