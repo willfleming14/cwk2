@@ -1,7 +1,9 @@
-from django.http import HttpResponse
+from django.http import JsonResponse
+from django.views import View
+from django.utils import timezone
 
 from bank.models import Account, Currency, Transaction
-from django.utils import timezone
+import json
 import random
 
 
@@ -32,6 +34,57 @@ import random
 # Transaction.objects.create(account_id=account_b, transaction_date=timezone.now(), transaction_amount=random.uniform(100, 1000), transaction_currency=gbp)
 # Transaction.objects.create(account_id=account_c, transaction_date=timezone.now(), transaction_amount=random.uniform(100, 1000), transaction_currency=gbp)
 
+class PayView(View):
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
-def hello(request): 
-    return HttpResponse("Hello, Will!")
+    def post(self, request, *args, **kwargs):
+        # Parse the incoming JSON data
+        data = json.loads(request.body)
+
+        # Extract the transaction details
+        amount = data['transaction']['amount']
+        currency_code = data['transaction']['currency']
+        recipient_account_name = data['transaction']['recipient account']
+
+        try:
+            currency = Currency.objects.get(code=currency_code)
+            recipient_account = Account.objects.get(company_name=recipient_account_name)
+        except (Currency.DoesNotExist, Account.DoesNotExist):
+            return JsonResponse({'status': 'failed', 'message': 'Invalid currency or recipient account'}, status=400)
+
+        transaction = Transaction.objects.create(
+            account_id=recipient_account,
+            transaction_amount=amount,
+            transaction_currency_id=currency,
+        )
+
+        recipient_account.balance += amount
+        recipient_account.save()
+
+        return JsonResponse({'status': 'success', 'TransactionID': transaction.transaction_id})
+    
+
+class RefundView(View):
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        # Parse the incoming JSON data
+        data = json.loads(request.body)
+
+        # Extract the transaction ID
+        transaction_id = data['transactionId']
+        
+        try:
+            transaction = Transaction.objects.get(transaction_id=transaction_id)
+        except (Transaction.DoesNotExist):
+            return JsonResponse({'status': 'failed', 'message': 'Invalid transaction ID'}, status=400)
+
+        amount = transaction.transaction_amount
+        recipient_account = Account.objects.get(account_id=transaction.account_id)
+
+        recipient_account.balance -= amount
+        recipient_account.save()
+
+        return JsonResponse({'status': 'success', 'transaction_id': transaction_id})
