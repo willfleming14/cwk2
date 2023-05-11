@@ -88,3 +88,44 @@ class RefundView(View):
         recipient_account.save()
 
         return JsonResponse({'status': 'success', 'transaction_id': transaction_id})
+    
+class CurrencyExchangeView(View):
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        # Parse the incoming JSON data
+        data = json.loads(request.body)
+
+        # Extract the parameters from the request
+        amount = data.get('amount')
+        from_currency_code = data.get('from_currency')
+        to_currency_code = data.get('to_currency')
+
+        # Validate the parameters
+        if not all([amount, from_currency_code, to_currency_code]):
+            return JsonResponse({'status': 'failed', 'message': 'Missing required parameters'}, status=400)
+        
+        # Convert the amount to a float
+        try:
+            amount = float(amount)
+        except ValueError:
+            return JsonResponse({'status': 'failed', 'message': 'Invalid amount parameter'}, status=400)
+
+        # Get the currencies
+        try:
+            from_currency = Currency.objects.get(code=from_currency_code)
+            to_currency = Currency.objects.get(code=to_currency_code)
+        except Currency.DoesNotExist:
+            return JsonResponse({'status': 'failed', 'message': 'Invalid currency code'}, status=400)
+
+        # Perform the currency exchange
+        exchanged_amount = amount * from_currency.exchange_rate / to_currency.exchange_rate
+
+        # Return the result
+        return JsonResponse({
+            'original_amount': amount,
+            'original_currency': from_currency.code,
+            'exchanged_amount': exchanged_amount,
+            'exchanged_currency': to_currency.code,
+        })
