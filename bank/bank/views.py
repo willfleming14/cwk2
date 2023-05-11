@@ -57,6 +57,7 @@ class PayView(View):
             account_id=recipient_account,
             transaction_amount=amount,
             transaction_currency_id=currency,
+            transaction_date = timezone.now(),
         )
 
         exchanged_amount = exchange_currency(transaction.transaction_amount, transaction.transaction_currency, recipient_account.currency_id)
