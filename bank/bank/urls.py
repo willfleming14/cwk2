@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import path, include
 from . import views
 urlpatterns = [
-    path('admin', admin.site.urls),
+    path('admin/', admin.site.urls),
     path('bank/pay', views.pay, name='pay'),
     path('bank/refund', views.refund, name='refund'),
     path('bank/exchange/<str:from_currency>/<str:amount>', views.exchange, name='currency exchange'),
