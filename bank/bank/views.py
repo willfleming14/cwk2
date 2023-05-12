@@ -61,9 +61,9 @@ class PayView(View):
         data = json.loads(request.body)
 
         # Extract the transaction details
-        amount = data['transaction']['amount']
-        company_name = data['transaction']['companyName']
-        bookingID = data['transaction']['bookingID']
+        amount = data['amount']
+        company_name = data['companyName']
+        bookingID = data['bookingID']
 
         # Confirm booking by confirming amount and reservation ID
         url = companyToLink(company_name) + '.pythonanywhere.com/airline/cancel_reservation' # Has to be changed for when we have actual links
