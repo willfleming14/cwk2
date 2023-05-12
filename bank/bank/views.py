@@ -68,7 +68,7 @@ def pay(request):
 
     try:
         # Confirm booking by confirming booking ID and amount
-        url = 'https://' + companyToLink(company_name) + '.pythonanywhere.com/airline/confirm_booking' # Has to be changed for when we have actual links
+        url = 'https://' + companyToLink(company_name) + '.pythonanywhere.com/airline/confirm_booking'
         payload = {
             'bookingID': str(bookingID), 
             'amount': amount,  
@@ -119,7 +119,7 @@ def refund(request):
         return JsonResponse({'status': 'failed', 'error': 'Invalid booking ID'}, status=400)
 
     company_name = transaction.account_id.company_name
-    url = 'https://' + companyToLink(company_name) + '.pythonanywhere.com/airline/cancel_booking' # Has to be changed for when we have actual link
+    url = 'https://' + companyToLink(company_name) + '.pythonanywhere.com/airline/cancel_booking'
     payload = {'bookingID': str(bookingID)}
     response = requests.post(url, json=payload)
     if response.status_code != 200:
