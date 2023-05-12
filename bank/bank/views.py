@@ -49,11 +49,11 @@ class PayView(View):
 
         # Extract the transaction details
         amount = data['transaction']['amount']
-        recipient_account_name = data['transaction']['companyName']
+        company_name = data['transaction']['companyName']
         bookingID = data['transaction']['bookingID']
 
         # Confirm booking by confirming amount and reservation ID
-        url = 'http://127.0.0.1:8000/airline/confirm_booking' # Has to be changed for when we have actual links
+        url = company_name + '.pythonanywhere.com/airline/cancel_reservation' # Has to be changed for when we have actual links
         data = {
             'bookingID': bookingID, 
             'amount': amount,  
@@ -64,7 +64,7 @@ class PayView(View):
 
         try:
             currency = Currency.objects.get(code='GBP')
-            recipient_account = Account.objects.get(company_name=recipient_account_name)
+            recipient_account = Account.objects.get(company_name=company_name)
         except (Currency.DoesNotExist, Account.DoesNotExist):
             return JsonResponse({'status': 'failed', 'message': 'Invalid currency or recipient account'}, status=400)
 
@@ -96,18 +96,19 @@ class RefundView(View):
         bookingID = data['bookingID']
 
         # Cancel booking by confirming bookingID
-        url = 'http://127.0.0.1:8000/airline/cancel_reservation' # Has to be changed for when we have actual links
+        try:
+            transaction = Transaction.objects.get(booking_id=bookingID)
+        except (Transaction.DoesNotExist):
+            return JsonResponse({'status': 'failed', 'message': 'Invalid transaction ID'}, status=400)
+    
+        company_name = transaction.account_id.company_name
+        url = company_name + '.pythonanywhere.com/airline/cancel_reservation' # Has to be changed for when we have actual links
         data = {
             'bookingID': bookingID,  
         }
         response = requests.post(url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
         if response != 200:
             return JsonResponse({'status': 'failed', 'message': 'Booking ID not confirmed'}, status=400)
-        
-        try:
-            transaction = Transaction.objects.get(booking_id=bookingID)
-        except (Transaction.DoesNotExist):
-            return JsonResponse({'status': 'failed', 'message': 'Invalid transaction ID'}, status=400)
 
         recipient_account = Account.objects.get(account_id=transaction.account_id)
 
