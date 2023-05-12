@@ -73,13 +73,13 @@ class PayView(View):
         }
         response = requests.post(url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
         if response.status_code != 200:
-            return JsonResponse({'status': 'failed', 'message': 'Amount not confirmed'}, status=400)
+            return JsonResponse({'status': 'failed', 'error': 'Amount not confirmed'}, status=400)
 
         try:
             currency = Currency.objects.get(code='GBP')
             recipient_account = Account.objects.get(company_name=company_name)
         except (Currency.DoesNotExist, Account.DoesNotExist):
-            return JsonResponse({'status': 'failed', 'message': 'Invalid currency or recipient account'}, status=400)
+            return JsonResponse({'status': 'failed', 'error': 'Invalid currency or recipient account'}, status=400)
 
         transaction = Transaction.objects.create(
             booking_id=bookingID,
@@ -94,7 +94,7 @@ class PayView(View):
         recipient_account.balance += exchanged_amount
         recipient_account.save()
 
-        return JsonResponse({'status': 'success', 'TransactionID': transaction.transaction_id})
+        return JsonResponse({'status': 'success', 'transactionID': transaction.transaction_id})
     
 
 class RefundView(View):
@@ -112,7 +112,7 @@ class RefundView(View):
         try:
             transaction = Transaction.objects.get(booking_id=bookingID)
         except (Transaction.DoesNotExist):
-            return JsonResponse({'status': 'failed', 'message': 'Invalid transaction ID'}, status=400)
+            return JsonResponse({'status': 'failed', 'error': 'Invalid transaction ID'}, status=400)
     
         company_name = transaction.account_id.company_name
         url = companyToLink(company_name) + '.pythonanywhere.com/airline/cancel_reservation' # Has to be changed for when we have actual links
@@ -121,7 +121,7 @@ class RefundView(View):
         }
         response = requests.post(url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
         if response.status_code != 200:
-            return JsonResponse({'status': 'failed', 'message': 'Booking ID not confirmed'}, status=400)
+            return JsonResponse({'status': 'failed', 'error': 'Booking ID not confirmed'}, status=400)
 
         recipient_account = Account.objects.get(account_id=transaction.account_id)
 
@@ -130,7 +130,7 @@ class RefundView(View):
         recipient_account.balance -= exchanged_amount
         recipient_account.save()
 
-        return JsonResponse({'status': 'success', 'transaction_id': bookingID})
+        return JsonResponse({'status': 'success'})
     
 
 def exchange_currency(amount, from_currency_id, to_currency_id):
