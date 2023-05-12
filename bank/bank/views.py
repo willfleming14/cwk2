@@ -22,18 +22,31 @@ def populateDatabase():
 
     gbp = Currency.objects.get(code='GBP')
 
-    Account.objects.create(company_name='Company A', balance=10000.00, currency_id=gbp)
-    Account.objects.create(company_name='Company B', balance=20000.00, currency_id=gbp)
-    Account.objects.create(company_name='Company C', balance=30000.00, currency_id=gbp)
+    Account.objects.create(company_name='KevAir', balance=10000.00, currency_id=gbp)
+    Account.objects.create(company_name='Cathay Pacific', balance=20000.00, currency_id=gbp)
+    Account.objects.create(company_name='FlyLo', balance=30000.00, currency_id=gbp)
+    Account.objects.create(company_name='Emirates', balance=30000.00, currency_id=gbp)
+
 
     account_a = Account.objects.get(account_id=1)
     account_b = Account.objects.get(account_id=2)
     account_c = Account.objects.get(account_id=3)
+    account_d = Account.objects.get(account_id=4)
 
-    Transaction.objects.create(account_id=account_a, booking_id='001', transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
-    Transaction.objects.create(account_id=account_b, booking_id='002', transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
-    Transaction.objects.create(account_id=account_c, booking_id='003', transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
+    Transaction.objects.create(account_id=account_a, booking_id='9123', transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
+    Transaction.objects.create(account_id=account_b, booking_id='9124', transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
+    Transaction.objects.create(account_id=account_c, booking_id='9125', transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
+    Transaction.objects.create(account_id=account_d, booking_id='9126', transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
 
+def companyToLink(company_name):
+    if company_name == 'KevAir':
+        return 'ed19km2b'
+    elif company_name == 'Cathay Pacific':
+        return 'mavericklow'
+    elif company_name == 'FlyLo':
+        return 'krzsztfkml'
+    else:
+        return 'safwanchowdhury'
 
 class PayView(View):
     def dispatch(self, *args, **kwargs):
@@ -53,7 +66,7 @@ class PayView(View):
         bookingID = data['transaction']['bookingID']
 
         # Confirm booking by confirming amount and reservation ID
-        url = company_name + '.pythonanywhere.com/airline/cancel_reservation' # Has to be changed for when we have actual links
+        url = companyToLink(company_name) + '.pythonanywhere.com/airline/cancel_reservation' # Has to be changed for when we have actual links
         data = {
             'bookingID': bookingID, 
             'amount': amount,  
@@ -102,7 +115,7 @@ class RefundView(View):
             return JsonResponse({'status': 'failed', 'message': 'Invalid transaction ID'}, status=400)
     
         company_name = transaction.account_id.company_name
-        url = company_name + '.pythonanywhere.com/airline/cancel_reservation' # Has to be changed for when we have actual links
+        url = companyToLink(company_name) + '.pythonanywhere.com/airline/cancel_reservation' # Has to be changed for when we have actual links
         data = {
             'bookingID': bookingID,  
         }
