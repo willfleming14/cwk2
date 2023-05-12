@@ -59,7 +59,7 @@ class PayView(View):
             'amount': amount,  
         }
         response = requests.post(url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
-        if response != 200:
+        if response.status_code != 200:
             return JsonResponse({'status': 'failed', 'message': 'Amount not confirmed'}, status=400)
 
         try:
@@ -107,7 +107,7 @@ class RefundView(View):
             'bookingID': bookingID,  
         }
         response = requests.post(url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
-        if response != 200:
+        if response.status_code != 200:
             return JsonResponse({'status': 'failed', 'message': 'Booking ID not confirmed'}, status=400)
 
         recipient_account = Account.objects.get(account_id=transaction.account_id)
