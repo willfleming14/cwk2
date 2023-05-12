@@ -7,6 +7,10 @@ import json
 import requests
 import random
 
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+
+
 def populateDatabase():
     Currency.objects.create(code='GBP', symbol='£', exchange_rate=1.00)
 
@@ -48,175 +52,127 @@ def companyToLink(company_name):
     else:
         return 'safwanchowdhury'
 
-class PayView(View):
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
 
-    def post(self, request, *args, **kwargs):
-        # Populate database if not already done so
-        if not Account.objects.exists():
-            populateDatabase()
-
+@csrf_exempt
+@require_http_methods(["POST"])
+def pay(request):
+    try:
         # Parse the incoming JSON data
         data = json.loads(request.body)
-
         # Extract the transaction details
         amount = data['amount']
         company_name = data['companyName']
         bookingID = data['bookingID']
+    except:
+        return JsonResponse({'status': 'failed', 'error': 'Parsing JSON'}, status=400)
 
-        # Confirm booking by confirming amount and reservation ID
-        url = companyToLink(company_name) + '.pythonanywhere.com/airline/cancel_reservation' # Has to be changed for when we have actual links
-        data = {
-            'bookingID': bookingID, 
+    try:
+        # Confirm booking by confirming booking ID and amount
+        url = 'https://' + companyToLink(company_name) + '.pythonanywhere.com/airline/confirm_booking' # Has to be changed for when we have actual links
+        payload = {
+            'bookingID': str(bookingID), 
             'amount': amount,  
         }
-        response = requests.post(url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
+        response = requests.post(url, json=payload)
         if response.status_code != 200:
             return JsonResponse({'status': 'failed', 'error': 'Amount not confirmed'}, status=400)
+    except:
+        return JsonResponse({'status': 'failed', 'error': 'confirming booking'}, status=400)
 
-        try:
-            currency = Currency.objects.get(code='GBP')
-            recipient_account = Account.objects.get(company_name=company_name)
-        except (Currency.DoesNotExist, Account.DoesNotExist):
-            return JsonResponse({'status': 'failed', 'error': 'Invalid currency or recipient account'}, status=400)
-
+    try:
+        currency = Currency.objects.get(code='GBP')
+        recipient_account = Account.objects.get(company_name=company_name)
+    except (Currency.DoesNotExist, Account.DoesNotExist):
+        return JsonResponse({'status': 'failed', 'error': 'Invalid currency or recipient account'}, status=400)
+    try:
         transaction = Transaction.objects.create(
             booking_id=bookingID,
             account_id=recipient_account,
             transaction_amount=amount,
-            transaction_currency_id=currency,
+            transaction_currency=currency,
             transaction_date = timezone.now(),
         )
 
-        exchanged_amount = exchange_currency(transaction.transaction_amount, transaction.transaction_currency, recipient_account.currency_id)
-
-        recipient_account.balance += exchanged_amount
+        recipient_account.balance += transaction.transaction_amount
         recipient_account.save()
+    except:
+        return JsonResponse({'status': 'failed', 'error': 'Unable to alter database'}, status=400)
 
-        return JsonResponse({'status': 'success', 'transactionID': transaction.transaction_id})
+    return JsonResponse({'status': 'success', 'transactionID': transaction.transaction_id})
     
 
-class RefundView(View):
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
+@csrf_exempt
+@require_http_methods(["POST"])
+def refund(request):
+    try:
         # Parse the incoming JSON data
         data = json.loads(request.body)
-
-        # Extract the transaction ID
+        # Extract the booking ID
         bookingID = data['bookingID']
+    except:
+        return JsonResponse({'status': 'failed', 'error': 'Parsing JSON'}, status=400)
 
-        # Cancel booking by confirming bookingID
-        try:
-            transaction = Transaction.objects.get(booking_id=bookingID)
-        except (Transaction.DoesNotExist):
-            return JsonResponse({'status': 'failed', 'error': 'Invalid transaction ID'}, status=400)
-    
-        company_name = transaction.account_id.company_name
-        url = companyToLink(company_name) + '.pythonanywhere.com/airline/cancel_reservation' # Has to be changed for when we have actual links
-        data = {
-            'bookingID': bookingID,  
-        }
-        response = requests.post(url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
-        if response.status_code != 200:
-            return JsonResponse({'status': 'failed', 'error': 'Booking ID not confirmed'}, status=400)
+    # Cancel booking by confirming bookingID
+    try:
+        transaction = Transaction.objects.get(booking_id=bookingID)
+    except (Transaction.DoesNotExist):
+        return JsonResponse({'status': 'failed', 'error': 'Invalid booking ID'}, status=400)
 
-        recipient_account = Account.objects.get(account_id=transaction.account_id)
+    company_name = transaction.account_id.company_name
+    url = 'https://' + companyToLink(company_name) + '.pythonanywhere.com/airline/cancel_booking' # Has to be changed for when we have actual link
+    payload = {'bookingID': str(bookingID)}
+    response = requests.post(url, json=payload)
+    if response.status_code != 200:
+        return JsonResponse({'status': 'failed', 'error': 'Booking ID not confirmed'}, status=400)
 
-        exchanged_amount = exchange_currency(transaction.transaction_amount, recipient_account.currency_id, transaction.transaction_currency)
+    recipient_account = transaction.account_id
 
-        recipient_account.balance -= exchanged_amount
+    try:
+        recipient_account.balance -= transaction.transaction_amount
         recipient_account.save()
+    except:
+        return JsonResponse({'status': 'failed', 'error': 'Unable to alter database'}, status=400)
 
-        return JsonResponse({'status': 'success'})
-    
+    return JsonResponse({'status': 'success'})
 
-def exchange_currency(amount, from_currency_id, to_currency_id):
-    # Convert the amount to a float
+
+@csrf_exempt
+@require_http_methods(["GET"])   
+def exchange(request, from_currency, amount):
+
+    # BANK_URL = 'http://127.0.0.1:8000'
+
+    # amount = 25.00
+    # recipient_account = 'KevAir'
+    # booking_id = '00129'
+
+    # payload = {'amount':amount, 'companyName':recipient_account, 'bookingID':booking_id}
+    # response = requests.post(f'{BANK_URL}/bank/pay', json=payload)
+    # print(response)
+
+
+    # booking_id = '00129'
+
+    # payload = {'bookingID':booking_id}
+    # response = requests.post(f'{BANK_URL}/bank/refund', json=payload)
+    # print(response)
+
+
+    # Populate database if not already done so
+    if not Account.objects.exists():
+        populateDatabase()
+        
     try:
         amount = float(amount)
     except ValueError:
-        raise ValueError('Invalid amount parameter')
-
-    # Get the currencies
+        return JsonResponse({'status': 'failed', 'message': 'Invalid amount'}, status=400)
+    
     try:
-        from_currency = Currency.objects.get(id=from_currency_id)
-        to_currency = Currency.objects.get(id=to_currency_id)
+        from_currency = Currency.objects.get(code=from_currency)
     except Currency.DoesNotExist:
-        raise ValueError('Invalid currency code')
+        return JsonResponse({'status': 'failed', 'message': 'Invalid currency code'}, status=400)
 
     # Perform the currency exchange
-    exchanged_amount = amount / from_currency.exchange_rate * to_currency.exchange_rate
+    exchanged_amount = amount / from_currency.exchange_rate
 
-    return format(exchanged_amount, '.2f')
-
-
-class CurrencyExchangeView(View):
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        # Parse the incoming JSON data
-        data = json.loads(request.body)
-
-        # Extract the parameters from the request
-        amount = data.get('amount')
-        from_currency_code = data.get('from_currency')
-        to_currency_code = data.get('to_currency')
-
-        # Validate the parameters
-        if not all([amount, from_currency_code, to_currency_code]):
-            return JsonResponse({'status': 'failed', 'message': 'Missing required parameters'}, status=400)
-        
-        # Convert the amount to a float
-        try:
-            amount = float(amount)
-        except ValueError:
-            return JsonResponse({'status': 'failed', 'message': 'Invalid amount parameter'}, status=400)
-
-        # Get the currencies
-        try:
-            from_currency = Currency.objects.get(code=from_currency_code)
-            to_currency = Currency.objects.get(code=to_currency_code)
-        except Currency.DoesNotExist:
-            return JsonResponse({'status': 'failed', 'message': 'Invalid currency code'}, status=400)
-
-        # Perform the currency exchange
-        exchanged_amount = amount / from_currency.exchange_rate * to_currency.exchange_rate
-
-        # Return the result
-        return JsonResponse({
-            'original_amount': format(amount, '.2f'),
-            'original_currency': from_currency.code,
-            'exchanged_amount': format(exchanged_amount, '.2f'),
-            'exchanged_currency': to_currency.code,
-        })
-    
-class GetCurrencyExchangeView(View):
-    def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
-
-    def get(self, request, from_currency, amount, *args, **kwargs):
-        # Populate database if not already done so
-        if not Account.objects.exists():
-            populateDatabase()
-            
-        try:
-            amount = float(amount)
-        except ValueError:
-            return JsonResponse({'status': 'failed', 'message': 'Invalid amount'}, status=400)
-        
-        try:
-            from_currency = Currency.objects.get(code=from_currency)
-            to_currency = Currency.objects.get(code='GBP')
-        except Currency.DoesNotExist:
-            return JsonResponse({'status': 'failed', 'message': 'Invalid currency code'}, status=400)
-
-        # Perform the currency exchange
-        exchanged_amount = amount / from_currency.exchange_rate * to_currency.exchange_rate
-
-        return JsonResponse({'convertedAmount': format(exchanged_amount, '.2f')})
-
-    
+    return JsonResponse({'convertedAmount': format(exchanged_amount, '.2f')})
