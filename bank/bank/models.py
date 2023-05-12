@@ -12,6 +12,7 @@ class Account(models.Model):
 class Transaction(models.Model):
     transaction_id = models.AutoField(primary_key=True)
     account_id = models.ForeignKey(Account, related_name='transactions', on_delete=models.CASCADE)
+    booking_id = models.IntegerField(null=True)
     transaction_date = models.DateTimeField(auto_now_add=True)
     transaction_amount = models.FloatField()
     transaction_currency = models.ForeignKey('Currency', on_delete=models.CASCADE)
