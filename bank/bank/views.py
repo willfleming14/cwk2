@@ -30,9 +30,9 @@ def populateDatabase():
     account_b = Account.objects.get(account_id=2)
     account_c = Account.objects.get(account_id=3)
 
-    Transaction.objects.create(account_id=account_a, booking_id=1, transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
-    Transaction.objects.create(account_id=account_b, booking_id=2, transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
-    Transaction.objects.create(account_id=account_c, booking_id=3, transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
+    Transaction.objects.create(account_id=account_a, booking_id='001', transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
+    Transaction.objects.create(account_id=account_b, booking_id='002', transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
+    Transaction.objects.create(account_id=account_c, booking_id='003', transaction_date=timezone.now(), transaction_amount=format(random.uniform(100, 1000), '.2f'), transaction_currency=gbp)
 
 
 class PayView(View):
