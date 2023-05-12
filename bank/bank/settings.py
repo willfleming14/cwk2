@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-uw1##w4g%9^c0m3a$yql1ex&xew%y7dxie@v9r6isjrztc8uq=
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['bankapi.pythonanywhere.com']
 
 
 # Application definition
