@@ -1,5 +1,4 @@
 from django.http import JsonResponse
-from django.views import View
 from django.utils import timezone
 
 from bank.models import Account, Currency, Transaction
